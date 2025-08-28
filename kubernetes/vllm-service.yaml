@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-inference
+  namespace: llm-training
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-inference
+  template:
+    spec:
+      containers:
+      - name: vllm
+        image: vllm/vllm-openai:latest
+        args: ["--model", "/models/llm-model", "--host", "0.0.0.0", "--port", "8000"]
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+            memory: 30Gi
+        volumeMounts:
+        - name: models
+          mountPath: /models
+      volumes:
+      - name: models
+        persistentVolumeClaim:
+          claimName: fsx-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-service
+  namespace: llm-training
+spec:
+  selector:
+    app: vllm-inference
+  ports:
+  - port: 80
+    targetPort: 8000
+  type: LoadBalancer

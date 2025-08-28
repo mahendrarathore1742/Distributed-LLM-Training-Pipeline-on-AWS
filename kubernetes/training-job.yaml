@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: llm-training-job
+  namespace: llm-training
+spec:
+  template:
+    spec:
+      serviceAccountName: training-job-sa
+      containers:
+      - name: trainer
+        image: pytorch/pytorch:2.1.0-cuda11.8-cudnn8-devel
+        command: ["python", "train.py"]
+        args: ["--dataset-path", "/data/input", "--checkpoint-path", "/data/checkpoints"]
+        resources:
+          limits:
+            nvidia.com/gpu: 8
+            memory: 120Gi
+          requests:
+            nvidia.com/gpu: 8
+            memory: 120Gi
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: fsx-claim
+      restartPolicy: Never
